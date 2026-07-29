@@ -33,7 +33,15 @@ curl http://localhost:3000/health
 npm test
 ```
 
-Testlerde Node.js'in yerleşik `node:test` modülü kullanıldı. Dış hava durumu servisi hata verdiğinde görev oluşturmanın başarısız olmaması mock servis ile kontrol edilir.
+Testlerde Node.js'in yerleşik `node:test` modülü kullanıldı. Test seti görev oluşturma, listeleme, tek görev getirme, kısmi güncelleme, tamamlama ve silme akışını kapsar. Ayrıca geçersiz `priority` için `400`, eksik alan doğrulaması için `400`, olmayan görev için `404` ve beklenmeyen hata için `500` cevapları kontrol edilir. Dış hava durumu servisi hata verdiğinde görev oluşturmanın başarısız olmaması mock servis ile test edilir. Bildirim tarafında da görev tamamlanınca notification service'in iki farklı kanala gönderim yaptığı doğrulanır.
+
+Beklenen başarılı test özeti:
+
+```text
+tests 8
+pass 8
+fail 0
+```
 
 ## Environment Variables
 
@@ -82,6 +90,13 @@ curl -X PATCH http://localhost:3000/api/v1/tasks/TASK_ID \
 curl -X PATCH http://localhost:3000/api/v1/tasks/TASK_ID/complete
 ```
 
+Bu endpoint çalıştığında sunucu terminalinde iki bildirim satırı görünür:
+
+```text
+[LogNotifier] Task completed: TASK_ID - TASK_TITLE
+[EmailNotifier] Completion email sent for task: TASK_ID
+```
+
 ### Görevi Sil
 
 ```bash
@@ -102,6 +117,25 @@ Tüm hata cevapları aynı gövde formatını kullanır:
 ```
 
 Doğrulama hataları `400`, bulunamayan görevler `404`, beklenmeyen hatalar `500` döner.
+
+Geçersiz priority örneği:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d "{\"title\":\"Hatalı görev\",\"description\":\"Priority testi\",\"priority\":\"urgent\",\"city\":\"Istanbul\"}"
+```
+
+Beklenen cevap:
+
+```json
+{
+  "error": {
+    "code": "INVALID_PRIORITY",
+    "message": "Priority must be one of: low, medium, high."
+  }
+}
+```
 
 ## Klasör Yapısı
 
@@ -127,6 +161,16 @@ Route dosyası yalnızca URL ile controller fonksiyonlarını eşler. Controller
 ## Bildirim Tasarımı
 
 Bildirimler `NotificationService` üzerinden yönetilir ve her kanal `send(task)` fonksiyonuna sahip ayrı bir modül olarak yazılır. Şu an `LogNotifier` ve `EmailNotifier` var; ikisi de gerçek gönderim yerine `console.log` ile simülasyon yapar. Yeni bir Slack kanalı eklemek için `SlackNotifier` gibi yeni bir sınıf yazıp notifier listesine eklemek yeterlidir. Görev tamamlama akışı belirli bir kanala bağlı olmadığı için service katmanı Slack, email veya log detaylarını bilmez.
+
+## Manuel Kontrol Akışı
+
+Servisi bir terminalde çalıştırın:
+
+```bash
+npm start
+```
+
+Başka bir terminalden sırasıyla görev oluşturun, dönen `id` değerini kullanarak listeleyin, tekil kaydı getirin, güncelleyin, tamamlayın ve silin. `PATCH /api/v1/tasks/:id/complete` çağrısından sonra `npm start` çalışan terminalde `LogNotifier` ve `EmailNotifier` satırları görünmelidir. Veriler in-memory tutulduğu için servis yeniden başlatıldığında kayıtlar sıfırlanır.
 
 ## Vaktim Olsaydı
 

@@ -149,3 +149,50 @@ test('completes a task and triggers notifications once', async () => {
     await server.close();
   }
 });
+
+test('lists, gets, updates, and deletes a task', async () => {
+  const server = await createTestServer();
+
+  try {
+    const created = await requestJson(server.baseUrl, '/api/v1/tasks', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: 'CRUD smoke test',
+        description: 'Check all task endpoints',
+        priority: 'low',
+        city: 'Istanbul'
+      })
+    });
+    const taskId = created.body.data.id;
+
+    const list = await requestJson(
+      server.baseUrl,
+      '/api/v1/tasks?status=pending&priority=low&page=1&limit=10'
+    );
+    const single = await requestJson(server.baseUrl, `/api/v1/tasks/${taskId}`);
+    const updated = await requestJson(server.baseUrl, `/api/v1/tasks/${taskId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        priority: 'high',
+        description: 'Updated description'
+      })
+    });
+    const deleted = await fetch(`${server.baseUrl}/api/v1/tasks/${taskId}`, {
+      method: 'DELETE'
+    });
+    const missing = await requestJson(server.baseUrl, `/api/v1/tasks/${taskId}`);
+
+    assert.equal(list.status, 200);
+    assert.equal(list.body.data.length, 1);
+    assert.equal(single.status, 200);
+    assert.equal(single.body.data.id, taskId);
+    assert.equal(updated.status, 200);
+    assert.equal(updated.body.data.priority, 'high');
+    assert.equal(updated.body.data.description, 'Updated description');
+    assert.equal(deleted.status, 204);
+    assert.equal(missing.status, 404);
+    assert.equal(missing.body.error.code, 'TASK_NOT_FOUND');
+  } finally {
+    await server.close();
+  }
+});

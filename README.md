@@ -171,6 +171,112 @@ npm start
 
 Başka bir terminalden sırasıyla görev oluşturun, dönen `id` değerini kullanarak listeleyin, tekil kaydı getirin, güncelleyin, tamamlayın ve silin. `PATCH /api/v1/tasks/:id/complete` çağrısından sonra `npm start` çalışan terminalde `LogNotifier` ve `EmailNotifier` satırları görünmelidir. Veriler in-memory tutulduğu için servis yeniden başlatıldığında kayıtlar sıfırlanır.
 
+### PowerShell ile Manuel Test
+
+Windows PowerShell kullanıyorsanız servisi ilk terminalde açık bırakın:
+
+```powershell
+npm start
+```
+
+İkinci bir PowerShell penceresinde aşağıdaki komutlarla endpointleri sırayla deneyebilirsiniz.
+
+Health kontrolü:
+
+```powershell
+Invoke-RestMethod http://localhost:3000/health
+```
+
+Görev oluşturma:
+
+```powershell
+$body = @{
+  title = "Manuel test gorevi"
+  description = "Tum endpointleri deniyorum"
+  priority = "high"
+  city = "Istanbul"
+} | ConvertTo-Json
+
+$task = Invoke-RestMethod -Method Post -Uri http://localhost:3000/api/v1/tasks -ContentType "application/json" -Body $body
+
+$task.data
+```
+
+Oluşan görev id değerini kaydetme:
+
+```powershell
+$id = $task.data.id
+```
+
+Görevleri listeleme:
+
+```powershell
+Invoke-RestMethod "http://localhost:3000/api/v1/tasks"
+```
+
+Filtre ve sayfalama ile listeleme:
+
+```powershell
+Invoke-RestMethod "http://localhost:3000/api/v1/tasks?status=pending&priority=high&page=1&limit=10"
+```
+
+Tek görevi getirme:
+
+```powershell
+Invoke-RestMethod "http://localhost:3000/api/v1/tasks/$id"
+```
+
+Görevi kısmen güncelleme:
+
+```powershell
+$update = @{
+  priority = "medium"
+  city = "Ankara"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Patch -Uri "http://localhost:3000/api/v1/tasks/$id" -ContentType "application/json" -Body $update
+```
+
+Görevi tamamlama:
+
+```powershell
+Invoke-RestMethod -Method Patch -Uri "http://localhost:3000/api/v1/tasks/$id/complete"
+```
+
+Bu işlemden sonra `npm start` çalışan terminalde bildirim logları görünür:
+
+```text
+[LogNotifier] Task completed: ...
+[EmailNotifier] Completion email sent for task: ...
+```
+
+Görevi silme:
+
+```powershell
+Invoke-RestMethod -Method Delete -Uri "http://localhost:3000/api/v1/tasks/$id"
+```
+
+Silindikten sonra aynı görevi isteme:
+
+```powershell
+Invoke-RestMethod "http://localhost:3000/api/v1/tasks/$id"
+```
+
+Bu komutun `TASK_NOT_FOUND` hatası döndürmesi beklenir. Geçersiz priority testi:
+
+```powershell
+$bad = @{
+  title = "Hatali gorev"
+  description = "Priority testi"
+  priority = "urgent"
+  city = "Istanbul"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri http://localhost:3000/api/v1/tasks -ContentType "application/json" -Body $bad
+```
+
+Bu komutun `INVALID_PRIORITY` hatası döndürmesi beklenir.
+
 ## Vaktim Olsaydı
 
 - Kalıcı veri için PostgreSQL veya MongoDB repository implementasyonu eklerdim.

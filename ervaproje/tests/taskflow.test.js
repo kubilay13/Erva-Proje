@@ -4,6 +4,7 @@ const test = require('node:test');
 
 const { createApp } = require('../app');
 const createTaskRepository = require('../src/repositories/taskRepository');
+const createNotificationService = require('../src/services/notificationService');
 
 function createTestServer(overrides = {}) {
   const taskRepository = createTaskRepository();
@@ -108,6 +109,92 @@ test('returns a consistent 400 error for invalid priority', async () => {
   }
 });
 
+test('returns a consistent 400 error for validation failures', async () => {
+  const server = await createTestServer();
+
+  try {
+    const response = await requestJson(server.baseUrl, '/api/v1/tasks', {
+      method: 'POST',
+      body: JSON.stringify({
+        description: 'Missing title',
+        priority: 'medium',
+        city: 'Ankara'
+      })
+    });
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(response.body, {
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'title is required.'
+      }
+    });
+  } finally {
+    await server.close();
+  }
+});
+
+test('returns a consistent 404 error for unknown tasks', async () => {
+  const server = await createTestServer();
+
+  try {
+    const response = await requestJson(
+      server.baseUrl,
+      '/api/v1/tasks/not-existing-id'
+    );
+
+    assert.equal(response.status, 404);
+    assert.deepEqual(response.body, {
+      error: {
+        code: 'TASK_NOT_FOUND',
+        message: 'Task not found.'
+      }
+    });
+  } finally {
+    await server.close();
+  }
+});
+
+test('returns a consistent 500 error for unexpected failures', async () => {
+  const originalConsoleError = console.error;
+  const app = createApp({
+    taskRepository: {
+      findById: () => {
+        throw new Error('Repository exploded');
+      }
+    },
+    weatherService: {
+      getWeatherForCity: async () => null
+    },
+    notificationService: {
+      notifyTaskCompleted: async () => undefined
+    }
+  });
+  const server = http.createServer(app);
+
+  await new Promise((resolve) => server.listen(0, resolve));
+  console.error = () => undefined;
+
+  try {
+    const address = server.address();
+    const response = await requestJson(
+      `http://127.0.0.1:${address.port}`,
+      '/api/v1/tasks/any-id'
+    );
+
+    assert.equal(response.status, 500);
+    assert.deepEqual(response.body, {
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Unexpected error occurred.'
+      }
+    });
+  } finally {
+    console.error = originalConsoleError;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test('completes a task and triggers notifications once', async () => {
   const notifications = [];
   const server = await createTestServer({
@@ -148,6 +235,22 @@ test('completes a task and triggers notifications once', async () => {
   } finally {
     await server.close();
   }
+});
+
+test('notification service sends completed task to every channel', async () => {
+  const sentChannels = [];
+  const notificationService = createNotificationService([
+    {
+      send: async (task) => sentChannels.push(`log:${task.id}`)
+    },
+    {
+      send: async (task) => sentChannels.push(`email:${task.id}`)
+    }
+  ]);
+
+  await notificationService.notifyTaskCompleted({ id: 'task-1' });
+
+  assert.deepEqual(sentChannels, ['log:task-1', 'email:task-1']);
 });
 
 test('lists, gets, updates, and deletes a task', async () => {

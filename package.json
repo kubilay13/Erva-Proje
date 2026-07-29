@@ -1,0 +1,10 @@
+{
+  "name": "taskflow-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix ervaproje start",
+    "test": "npm --prefix ervaproje test",
+    "install:app": "npm --prefix ervaproje install"
+  }
+}

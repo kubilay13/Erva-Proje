@@ -14,13 +14,12 @@ Open-Meteo entegrasyonu iki resmi endpoint kullanır:
 ## Kurulum
 
 ```bash
-cd ervaproje
-npm install
-cp .env.example .env
+npm run install:app
+copy ervaproje\.env.example ervaproje\.env
 npm start
 ```
 
-Windows PowerShell kullanıyorsanız `.env.example` dosyasını elle `.env` olarak kopyalayabilirsiniz.
+Windows PowerShell kullanıyorsanız `.env.example` dosyasını elle `ervaproje/.env` olarak da kopyalayabilirsiniz. Uygulama kodu `ervaproje` klasöründedir; repo kökündeki `npm start` ve `npm test` komutları otomatik olarak o klasöre yönlenir.
 
 Varsayılan port `3000` olur. Servis çalışınca sağlık kontrolü:
 
@@ -31,7 +30,6 @@ curl http://localhost:3000/health
 ## Test
 
 ```bash
-cd ervaproje
 npm test
 ```
 

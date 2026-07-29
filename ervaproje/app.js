@@ -1,41 +1,57 @@
-var createError = require('http-errors');
 var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+var config = require('./src/config');
+var createTaskController = require('./src/controllers/taskController');
+var errorHandler = require('./src/middlewares/errorHandler');
+var notFoundHandler = require('./src/middlewares/notFoundHandler');
+var createNotificationService = require('./src/services/notificationService');
+var createTaskRepository = require('./src/repositories/taskRepository');
+var createTaskRoutes = require('./src/routes/taskRoutes');
+var createTaskService = require('./src/services/taskService');
+var createWeatherService = require('./src/services/weatherService');
 
-var app = express();
+function createApp(dependencies) {
+  var app = express();
+  var taskRepository =
+    dependencies && dependencies.taskRepository
+      ? dependencies.taskRepository
+      : createTaskRepository();
+  var weatherService =
+    dependencies && dependencies.weatherService
+      ? dependencies.weatherService
+      : createWeatherService({
+          geocodingUrl: config.openMeteo.geocodingUrl,
+          forecastUrl: config.openMeteo.forecastUrl,
+          timeoutMs: config.weatherTimeoutMs
+        });
+  var notificationService =
+    dependencies && dependencies.notificationService
+      ? dependencies.notificationService
+      : createNotificationService();
+  var taskService = createTaskService({
+    taskRepository: taskRepository,
+    weatherService: weatherService,
+    notificationService: notificationService
+  });
+  var taskController = createTaskController(taskService);
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
+  app.use(logger('dev'));
+  app.use(express.json());
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+  app.get('/health', function healthCheck(req, res) {
+    res.json({ status: 'ok', service: 'TaskFlow' });
+  });
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+  app.use('/api/v1/tasks', createTaskRoutes(taskController));
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
+  app.use(notFoundHandler);
+  app.use(errorHandler);
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+  return app;
+}
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-});
+var app = createApp();
 
 module.exports = app;
+module.exports.createApp = createApp;

@@ -1,11 +1,19 @@
 {
-  "name": "taskflow-root",
+  "name": "taskflow",
   "version": "1.0.0",
   "private": true,
+  "description": "TaskFlow task management REST API",
   "scripts": {
-    "postinstall": "npm --prefix ervaproje install",
-    "start": "npm --prefix ervaproje start",
-    "test": "npm --prefix ervaproje test",
-    "install:app": "npm --prefix ervaproje install"
+    "start": "node ./bin/www",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "debug": "^4.4.3",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "morgan": "^1.11.0"
   }
 }

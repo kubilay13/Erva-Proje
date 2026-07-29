@@ -15,11 +15,11 @@ Open-Meteo entegrasyonu iki resmi endpoint kullanır:
 
 ```bash
 npm install
-copy ervaproje\.env.example ervaproje\.env
+copy .env.example .env
 npm start
 ```
 
-Windows PowerShell kullanıyorsanız `.env.example` dosyasını elle `ervaproje/.env` olarak da kopyalayabilirsiniz. Uygulama kodu `ervaproje` klasöründedir; repo kökündeki `npm install`, `npm start` ve `npm test` komutları otomatik olarak o klasöre yönlenir.
+Windows PowerShell kullanıyorsanız `.env.example` dosyasını elle `.env` olarak da kopyalayabilirsiniz.
 
 Varsayılan port `3000` olur. Servis çalışınca sağlık kontrolü:
 
@@ -140,20 +140,19 @@ Beklenen cevap:
 ## Klasör Yapısı
 
 ```text
-ervaproje/
-  app.js
-  bin/www
-  src/
-    config/
-    controllers/
-    errors/
-    middlewares/
-    notifiers/
-    repositories/
-    routes/
-    services/
-    utils/
-  tests/
+app.js
+bin/www
+src/
+  config/
+  controllers/
+  errors/
+  middlewares/
+  notifiers/
+  repositories/
+  routes/
+  services/
+  utils/
+tests/
 ```
 
 Route dosyası yalnızca URL ile controller fonksiyonlarını eşler. Controller HTTP request/response işini yönetir. Service katmanı doğrulama, iş kuralları, hava durumu alma ve bildirim tetikleme gibi davranışları içerir. Repository bellek içi Map kullanır ama dışarıya küçük bir veri erişim arayüzü sunduğu için ileride gerçek veritabanına geçiş daha az değişiklik ister.

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "postinstall": "npm --prefix ervaproje install",
     "start": "npm --prefix ervaproje start",
     "test": "npm --prefix ervaproje test",
     "install:app": "npm --prefix ervaproje install"
